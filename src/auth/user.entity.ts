@@ -7,7 +7,7 @@ export class User extends BaseEntity{
     id: number; 
 
   
-    @Column()
+    @Column({nullable:true})
     name :String;
 
     @Column()
@@ -16,17 +16,17 @@ export class User extends BaseEntity{
     @Column()
     password : string ;
 
-    @Column()
+    @Column({nullable:true})
     NumTel : number ;
-    @Column()
+    @Column({nullable:true})
     NumCIN : number ;
 
-    @Column()
+    @Column({nullable:true})
     CompanyGroup  : String ;
 
-    @Column()
+    @Column({nullable:true})
     SoldeConge : number;
-    @Column()
+    @Column({nullable:true})
     Solde1 : number ;
     @Column({ type: 'json', nullable: true })
     profilePic: any;

@@ -44,6 +44,13 @@ export class UserService {
 
         return savedUser;
     }
+    async getUserById(id: number): Promise<User> {
+        const user = await this.UserRepository.findOne({ where: { id } } );
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        return user;
+    }
 
     
 
@@ -57,20 +64,59 @@ export class UserService {
         const user = await this.UserRepository.findOne({ where: { email } });
         return user || null;
     }
-    
-
-    /*async deleteUserById(userId: number): Promise<void> {
-        // Find the user by ID
-        const user = await this.UserRepository.findOne(userId);
-
-        // If user does not exist, throw NotFoundException
+    async deleteUser(id: number): Promise<void> {
+   
+        const user = await this.UserRepository.findOne({ where: { id } });
         if (!user) {
-            throw new NotFoundException(`User with ID ${userId} not found`);
+            throw new NotFoundException('User not found');
         }
 
-        // Delete the user
-        await this.UserRepository.remove(user);
-    }*/
+       
+        await this.UserRepository.delete(id);
+    }
+    async updateUserName(id: number, newName: string): Promise<User> {
+        const user = await this.getUserById(id);
+        user.name = newName;
+        return this.UserRepository.save(user);
+    }
+    async updateUserEmail(id: number, newEmail: string): Promise<User> {
+        const user = await this.getUserById(id);
+        user.email = newEmail;
+        return this.UserRepository.save(user);
+    }
+    async updateUserNumTel(id: number, newNumTel: number): Promise<User> {
+        const user = await this.getUserById(id);
+        user.NumTel = newNumTel;
+        return this.UserRepository.save(user);
+    }
+    async updateUserNumCIN(id: number, newNumCIN: number): Promise<User> {
+        const user = await this.getUserById(id);
+        user.NumCIN = newNumCIN;
+        return this.UserRepository.save(user);
+    }
+    async updateUserSoldeConge(id: number, newSoldeConge: number): Promise<User> {
+        const user = await this.getUserById(id);
+        user.SoldeConge = newSoldeConge;
+        return this.UserRepository.save(user);
+    }
+    async updateUserSolde(id: number, newSolde: number): Promise<User> {
+        const user = await this.getUserById(id);
+        user.Solde1 = newSolde;
+        return this.UserRepository.save(user);
+    }
+    async updateProfilePic(id: number, profilePicUrl: string): Promise<User> {
+        const user = await this.getUserById(id);
+        user.profilePic = profilePicUrl;
+        return this.UserRepository.save(user);
+    }
+    async findAll(): Promise<User[]> {
+        return this.UserRepository.find();
+      }
+
+
+    
+
+  
 }
     
 
