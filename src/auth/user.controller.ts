@@ -1,7 +1,10 @@
 
-import { Body, Controller, Post , Get , Param, NotFoundException, ParseIntPipe , Delete , Patch} from '@nestjs/common';
+import { Body, Controller, Post , Get , Param, NotFoundException, ParseIntPipe , Delete , Patch, UseGuards, Req, UseInterceptors, UploadedFile} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './user.entity';
+import { AuthGuard } from './jwt-auth-guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express'
 
 @Controller('users')
 export class UsersController {
@@ -15,9 +18,11 @@ export class UsersController {
             password: string;
             NumTel: number;
             NumCIN: number;
+            userrole : String;
             CompanyGroup: string;
             SoldeConge: number;
             Solde1: number;
+            departmentId : number;
         },
     ): Promise<User> {
         return await this.userService.createUser(userData);
@@ -48,49 +53,85 @@ export class UsersController {
     async getUserById(@Param('id', ParseIntPipe) id: number): Promise<User> {
         return this.userService.getUserById(id);
     }
-    @Delete('id/:id')
+  @Delete('id/:id')
 deleteTask(@Param('id' , ParseIntPipe) id : number) : Promise<void> {
   return   this.userService.deleteUser(id);
 }
-@Patch('name/:id')
-async updateUserName(@Param('id' , ParseIntPipe) id: number, @Body('name') newName: string): Promise<User> {
-    return this.userService.updateUserName(id, newName);
-}
 
-@Patch('email/:id')
-async updateUserEmail(@Param('id' , ParseIntPipe) id: number, @Body('email') newEmail: string): Promise<User> {
-    return this.userService.updateUserEmail(id, newEmail);
-}
-@Patch('NumTel/:id')
-async updateUserNumTel(@Param('id' , ParseIntPipe) id: number, @Body('NumTel') newNumTel: number): Promise<User> {
-    return this.userService.updateUserNumTel(id, newNumTel);
-}
-@Patch('NumCIN/:id')
-async updateUserNumCIN(@Param('id' , ParseIntPipe) id: number, @Body('NumCIN') newNumCIN: number): Promise<User> {
-    return this.userService.updateUserNumCIN(id, newNumCIN);
-}
-@Patch('SoldeConge/:id')
-async updateUserSoldeConge(@Param('id' , ParseIntPipe) id: number, @Body('SoldeConge') newSoldeConge: number): Promise<User> {
-    return this.userService.updateUserSoldeConge(id, newSoldeConge);
-}
-@Patch('Solde1/:id')
-async updateUserSolde(@Param('id' , ParseIntPipe) id: number, @Body('Solde1') newSolde: number): Promise<User> {
-    return this.userService.updateUserSoldeConge(id, newSolde);
-}
+@Patch(':id')
 
-
-@Patch('profilePic/:id')
-async updateProfilePic(
-    @Param('id' , ParseIntPipe) id: number,
-    @Body('profilePic') profilePic: string
+async updateUser(
+  @Param('id') id: number,
+  @Body() updates: Partial<User>,
+  @Body('departmentId') departmentId: number
 ): Promise<User> {
-    return this.userService.updateProfilePic(id, profilePic);
+  return this.userService.updateUser(id, updates);
 }
+
+
+
+@UseGuards(AuthGuard)
+@Get('ZZ')
+async getSameDepartmentUsers(@Req() req: any) {
+  
+  const user: User = req.user;
+
+    const users = await this.userService.getUserByDepartement(user.DepartmentId);
+
+    return users;
+ 
+}
+
+
+@Patch(':id/solde')
+async calculateSolde(@Param('id') userId: number) {
+  try {
+    await this.userService.calculateSolde(userId);
+    return { message: 'Solde updated successfully' };
+  } catch (error) {
+    return { error: 'Failed to update solde' };
+  }
+}
+
 
 @Get()
 async findAll(): Promise<any[]> {
   return this.userService.findAll();
 }
+
+
+
+
+
+
+
+
+@UseGuards(AuthGuard)
+@Delete(':id')
+async deleteUserWithDemands(@Param('id') userId: number): Promise<void> {
+  await this.userService.deleteUserWithDemands(userId);
+}
+
+/*@Post(':userId/upload-profile-picture')
+@UseInterceptors(FileInterceptor('file'))
+async uploadProfilePicture(
+  @UploadedFile() file: Express.Multer.File,
+  @Param('userId', ParseIntPipe) userId: number,
+) {
+  if (!file) {
+    throw new Error('No file uploaded');
+  }
+  return await this.userService.uploadProfilePicture(userId, file);
+}*/
+
+@Post('avatar')
+@UseGuards(AuthGuard)
+@UseInterceptors(FileInterceptor('file'))
+async addAvatar(@Req() req : any, @UploadedFile() file: Express.Multer.File) {
+  const user: User = req.user;
+  return this.userService.addAvatar(req.user.id, file.buffer, file.originalname);
+}
+
 }
 
 

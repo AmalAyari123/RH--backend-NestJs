@@ -1,4 +1,9 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { type } from "os";
+import { Autorisation } from "src/autorisation/entities/autorisation.entity";
+import DatabaseFile from "src/databaseFile.entity";
+import { Demande } from "src/demande/entities/demande.entity";
+import { Departement } from "src/departement/entities/departement.entity";
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class User extends BaseEntity{
@@ -8,7 +13,7 @@ export class User extends BaseEntity{
 
   
     @Column({nullable:true})
-    name :String;
+    name :string;
 
     @Column()
     email :string;
@@ -24,12 +29,37 @@ export class User extends BaseEntity{
     @Column({nullable:true})
     CompanyGroup  : String ;
 
-    @Column({nullable:true})
+    @Column({ nullable: true, type: 'float' })
     SoldeConge : number;
-    @Column({nullable:true})
+    @Column({ nullable: true, type: 'float' })
     Solde1 : number ;
-    @Column({ type: 'json', nullable: true })
-    profilePic: any;
+   /* @Column({ type: 'varchar', length: 300, nullable: true })
+    profilePic: string;*/
+
+    @Column({nullable:true})
+    DepartmentId : number ;
+    @Column({nullable:true})
+    userrole : String;
+  @OneToMany(type => Demande , demande => demande.user , {eager : true})
+   demandes : Demande[]; 
+
+  @JoinColumn({ name: 'avatarId' })
+  @OneToOne(
+    () => DatabaseFile,
+    {
+      nullable: true
+    }
+  )
+  public avatar?: DatabaseFile;
+ 
+  @Column({ nullable: true })
+  public avatarId?: number;
+
+   @OneToMany(type => Autorisation , autorisation => autorisation.user , {eager : true})
+   autorisations : Autorisation[]; 
+   @ManyToOne(type => Departement , departement => departement.users )
+@JoinColumn({name : 'DepartmentId'})
+   departement : Departement ; 
    
 
     
