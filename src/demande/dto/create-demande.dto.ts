@@ -7,6 +7,6 @@ export class CreateDemandeDto{
     @IsNotEmpty()
     type: String;
     commentaire?: String;
-    justificatif?: String; 
+    justificatifId?: number; 
     count : number;
 }

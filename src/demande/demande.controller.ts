@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ValidationPipe, UsePipes, Query, ParseIntPipe  } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ValidationPipe, UsePipes, Query, ParseIntPipe, UseInterceptors, UploadedFile  } from '@nestjs/common';
 import { DemandeService } from './demande.service';
 import { CreateDemandeDto } from './dto/create-demande.dto';
 import { User } from 'src/auth/user.entity';
@@ -11,6 +11,7 @@ import { Roles } from 'src/auth/role-decorator';
 import { RolesGuard } from 'src/auth/role.guard';
 import { Role } from 'src/auth/rolecustom';
 import { DemandeStatus } from './demande-status';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 
 @Controller('demande')
@@ -51,6 +52,14 @@ export class DemandeController {
   deleteDemand(@Param('id' , ParseIntPipe) id : number) : Promise<void> {
     return   this.demandeService.deleteDemand(id);
   }
+  @Post('avatar')
+  @UseGuards(AuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async addJustif(@Query('demandId') demandId: number, @UploadedFile() file: Express.Multer.File) {
+    return this.demandeService.addJustificatif(demandId, file.buffer, file.originalname);
+  }
+
+
  
  
  

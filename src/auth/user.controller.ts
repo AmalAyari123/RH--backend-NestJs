@@ -22,6 +22,8 @@ export class UsersController {
             CompanyGroup: string;
             SoldeConge: number;
             Solde1: number;
+            congeMaladie:number;
+            recuperation:number;
             departmentId : number;
         },
     ): Promise<User> {
@@ -58,6 +60,11 @@ deleteTask(@Param('id' , ParseIntPipe) id : number) : Promise<void> {
   return   this.userService.deleteUser(id);
 }
 
+@Get(':id/F')
+    async getNotif(@Param('id', ParseIntPipe) id: number): Promise<User> {
+        return this.userService.findOne(id);
+    }
+
 @Patch(':id')
 
 async updateUser(
@@ -67,6 +74,7 @@ async updateUser(
 ): Promise<User> {
   return this.userService.updateUser(id, updates);
 }
+
 
 
 
@@ -82,11 +90,34 @@ async getSameDepartmentUsers(@Req() req: any) {
  
 }
 
+@UseGuards(AuthGuard)
+@Patch(':userId/calculate-solde/:demandeId')
+async calculateSolde(
+  @Param('userId') userId: number,
+  @Param('demandeId') demandeId: number, // Change the type to number
+): Promise<void> {
+  await this.userService.calculateSolde(userId, demandeId);
+}
 
-@Patch(':id/solde')
-async calculateSolde(@Param('id') userId: number) {
+
+
+@UseGuards(AuthGuard)
+@Patch(':id/maladie/:demandeId')
+async calculateSoldeMaladie(@Param('id') userId: number , @Param('demandeId') demandeId: number,) {
   try {
-    await this.userService.calculateSolde(userId);
+    await this.userService.deductSoldeMaladie(userId , demandeId);
+    return { message: 'Solde updated successfully' };
+  } catch (error) {
+    return { error: 'Failed to update solde' };
+  }
+}
+
+
+@UseGuards(AuthGuard)
+@Patch(':id/rec/:demandeId')
+async calculateSoldeRec(@Param('id') userId: number , @Param('demandeId') demandeId: number,) {
+  try {
+    await this.userService.deductSoldeRec(userId , demandeId);
     return { message: 'Solde updated successfully' };
   } catch (error) {
     return { error: 'Failed to update solde' };
@@ -97,6 +128,11 @@ async calculateSolde(@Param('id') userId: number) {
 @Get()
 async findAll(): Promise<any[]> {
   return this.userService.findAll();
+}
+
+@Post('reset-solde-conge')
+async resetSoldeConge(): Promise<void> {
+  await this.userService.resetSoldeConge();
 }
 
 
@@ -112,17 +148,12 @@ async deleteUserWithDemands(@Param('id') userId: number): Promise<void> {
   await this.userService.deleteUserWithDemands(userId);
 }
 
-/*@Post(':userId/upload-profile-picture')
-@UseInterceptors(FileInterceptor('file'))
-async uploadProfilePicture(
-  @UploadedFile() file: Express.Multer.File,
-  @Param('userId', ParseIntPipe) userId: number,
-) {
-  if (!file) {
-    throw new Error('No file uploaded');
-  }
-  return await this.userService.uploadProfilePicture(userId, file);
-}*/
+
+
+@Post('compteur-solde')
+async triggerCompteurSolde(): Promise<void> {
+  await this.userService.manualCompteurSolde();
+}
 
 @Post('avatar')
 @UseGuards(AuthGuard)

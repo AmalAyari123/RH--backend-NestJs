@@ -7,6 +7,8 @@ import { Demande } from './entities/demande.entity';
 import { DemandeStatus } from './demande-status';
 import { User } from 'src/auth/user.entity';
 import { GetDemandeFilter } from './get-demande-filter.dto';
+import DatabaseFilesService from 'src/databaseFile.Service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class DemandeService {
@@ -14,13 +16,19 @@ export class DemandeService {
   constructor(
     @InjectRepository(Demande)
     private DemandeRepository: Repository<Demande>,
+    private readonly databaseFilesService: DatabaseFilesService,
+
+
 
 
 
 ){}
 
 async CreateDemande(CreateDemandeDto : CreateDemandeDto , user : User): Promise<Demande>{
-  const {date_debut , date_fin , type , commentaire , justificatif , count} = CreateDemandeDto;
+  const {date_debut , date_fin , type , commentaire , justificatifId , count} = CreateDemandeDto;
+
+
+
   const demande = new Demande();
   demande.count = count ; 
   
@@ -28,9 +36,11 @@ async CreateDemande(CreateDemandeDto : CreateDemandeDto , user : User): Promise<
   demande.date_fin = date_fin; 
   demande.type = type;
   demande.commentaire = commentaire ; 
-  demande.justificatif = justificatif ;
+  demande.justificatifId = justificatifId ;
   demande.user = user;
   demande.status = "En Attente";
+  
+
   await demande.save();
   console.log(user);
   
@@ -57,6 +67,17 @@ async deleteDemand(demandId: number): Promise<void> {
   }
 
   await this.DemandeRepository.delete(demandId);
+}
+
+async addJustificatif(Id: number, imageBuffer: Buffer, filename: string) {
+  if (!Id) {
+    throw new NotFoundException('Demand ID is required');
+  }
+  const justificatif = await this.databaseFilesService.uploadDatabaseFile(imageBuffer, filename);
+  await this.DemandeRepository.update(Id, {
+    justificatifId: justificatif.id
+  });
+  return justificatif;
 }
 
 
@@ -130,18 +151,16 @@ async updateDemande(id: number, updates: Partial<Demande>): Promise<Demande> {
 
 
 
-async findDemandsbyDepartement(user : User): Promise<Demande[]> {
+async findDemandsbyDepartement(user: User): Promise<Demande[]> {
   const query = this.DemandeRepository.createQueryBuilder('demande')
-  .innerJoin('demande.user', 'usr')
-  .innerJoin('usr.departement', 'departement') // Assuming the relation between User and Departement is named 'departement'
-  .andWhere('departement.id = :departmentId', { departmentId: user.DepartmentId })
-  .andWhere('demande.status = :status', { status: 'Accepté' });
+    .innerJoin('demande.user', 'usr')
+    .innerJoin('usr.departement', 'departement') // Assuming the relation between User and Departement is named 'departement'
+    .where('departement.id = :departmentId', { departmentId: user.DepartmentId });
 
-const demandes = await query.getMany();
-return demandes;
-
-
+  const demandes = await query.getMany();
+  return demandes;
 }
+
 }
 
 

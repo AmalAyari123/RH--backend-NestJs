@@ -11,6 +11,9 @@ import { Demande } from 'src/demande/entities/demande.entity';
 import path from 'path';
 import * as fs from 'fs';
 import DatabaseFilesService from 'src/databaseFile.Service';
+import { DemandeService } from 'src/demande/demande.service';
+import { Cron } from '@nestjs/schedule';
+
 
 
 @Injectable()
@@ -18,10 +21,11 @@ export class UserService {
     constructor(
         @InjectRepository(User)
         private UserRepository: UserRepository,
-       private  departmentservices :  DepartementService ,
        
         private emailService: EmailService,
+        private demandeService: DemandeService,
         private readonly databaseFilesService: DatabaseFilesService,
+        
 
 
 
@@ -37,6 +41,7 @@ export class UserService {
         CompanyGroup: string;
         SoldeConge: number;
         Solde1: number;
+        recuperation:number;
        departmentId : number
     }): Promise<User> {
         const passwordLength = 6;
@@ -45,10 +50,11 @@ export class UserService {
         // Hash the password using bcrypt
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
        /* const defaultProfilePicUrl = 'https://t4.ftcdn.net/jpg/00/64/67/27/360_F_64672736_U5kpdGs9keUll8CRQ3p3YaEv2M6qkVY5.jpg';*/
-  
+       const congeMaladie = 4.0;
        
         const user =  this.UserRepository.create({
             ...userData,
+            congeMaladie : congeMaladie,
           /*  profilePic: defaultProfilePicUrl,*/
             password: hashedPassword
         });
@@ -106,42 +112,9 @@ export class UserService {
         return this.UserRepository.find({ relations: ['departement'] });
       }
 
+   
 
-      /*async uploadProfilePicture(userId: number, file: Express.Multer.File): Promise<User> {
-        const user = await this.getUserById(userId);
-        if (!user) {
-          throw new Error('User not found');
-        }
-    
-        // Generate a unique file name (You may use other methods to ensure uniqueness)
-        const fileName = `${userId}-${file.originalname}`;
-    
-        // Define the destination directory where the file will be saved
-        const uploadDir = path.join(__dirname, '..', 'uploads');
-    
-        try {
-          // Create the uploads directory if it doesn't exist
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
-    
-          // Define the destination path where the file will be saved
-          const filePath = path.join(uploadDir, fileName);
-    
-          // Write the uploaded file to the destination path
-          fs.writeFileSync(filePath, file.buffer);
-    
-          // Update the user's profilePic property with the file path
-          user.profilePic = filePath;
-    
-          // Save the updated user to the database
-          return await this.UserRepository.save(user);
-        } catch (error) {
-          // Handle any errors that occur during file saving
-          throw new Error(`Error saving profile picture: ${error.message}`);
-        }
-      }*/
-    
+      
       
 
 
@@ -174,33 +147,75 @@ export class UserService {
         return user || null;
     }
 
-      async calculateSolde(userId: number): Promise<void> {
-        const user = await this.getUserById(userId);
-        if (!user) {
-          throw new NotFoundException('User not found');
-        }
-    
-        let remainingCount = 0;
-    
-        user.demandes.forEach((demande: Demande) => {
-          if (user.Solde1 !== null && user.Solde1 > 0) {
-            if (user.Solde1 >= demande.count) {
-              user.Solde1 -= demande.count;
-            } else {
-              remainingCount = demande.count - user.Solde1;
-              user.Solde1 = 0;
-            }
-          } else {
-            remainingCount += demande.count;
-          }
-        });
-    
-        if (remainingCount > 0) {
-          user.SoldeConge -= remainingCount;
-        }
-    
-        await this.UserRepository.save(user);
+    @Cron('0 0 1 * *') // Runs at midnight on the first day of every month
+    async compteurSolde(): Promise<void> {
+      const users = await this.findAll();
+      for (const user of users) {
+        
+          user.SoldeConge += 1.6;
+          await this.UserRepository.save(user);
+        
       }
+    }
+
+    async manualCompteurSolde(): Promise<void> {
+      await this.compteurSolde();
+    }
+
+    async resetSoldeConge(): Promise<void> {
+      const users = await this.findAll();
+      for (const user of users) {
+        if (user.SoldeConge !== null) {
+          user.Solde1 = user.SoldeConge;
+          user.SoldeConge = 0;
+          user.congeMaladie = 4 ;
+          await this.UserRepository.save(user);
+        }
+      }
+    }
+    async findOne(userId: number): Promise<User> {
+      return this.UserRepository.findOne({
+        where: { id: userId },
+        relations: ['notificationTokens'],
+      })
+     }
+
+
+
+
+    async calculateSolde(userId: number, demandeId: number): Promise<void> {
+      const user = await this.getUserById(userId);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+  
+      const demande = await this.demandeService.getDemandeById(demandeId);
+      if (!demande) {
+        throw new NotFoundException('Demande not found');
+      }
+  
+      let remainingCount = 0;
+  
+      if (demande.type === 'Congés payés') {
+        if (user.Solde1 !== null && user.Solde1 > 0) {
+          if (user.Solde1 >= demande.count) {
+            user.Solde1 -= demande.count;
+          } else {
+            remainingCount = demande.count - user.Solde1;
+            user.Solde1 = 0;
+          }
+        } else {
+          remainingCount += demande.count;
+        }
+      }
+  
+      if (remainingCount > 0) {
+        user.SoldeConge -= remainingCount;
+      }
+  
+      await this.UserRepository.save(user);
+    }
+  
 
       async addAvatar(userId: number, imageBuffer: Buffer, filename: string) {
         const avatar = await this.databaseFilesService.uploadDatabaseFile(imageBuffer, filename);
@@ -210,6 +225,49 @@ export class UserService {
         return avatar;
       }
 
+
+      async deductSoldeMaladie(userId: number , demandeId:number): Promise<void> {
+        const user = await this.getUserById(userId);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        const demande = await this.demandeService.getDemandeById(demandeId);
+        if (!demande) {
+          throw new NotFoundException('Demande not found');
+        }
+    
+      
+            if (user.congeMaladie !== null && user.congeMaladie > 0) {
+                if (user.congeMaladie >= demande.count) {
+                    user.congeMaladie -= demande.count;
+                }
+            }
+        
+    
+        // Save the updated user to the database
+        await this.UserRepository.save(user);
+    }
+    async deductSoldeRec(userId: number , demandeId:number): Promise<void> {
+      const user = await this.getUserById(userId);
+      if (!user) {
+          throw new NotFoundException('User not found');
+      }
+      const demande = await this.demandeService.getDemandeById(demandeId);
+      if (!demande) {
+        throw new NotFoundException('Demande not found');
+      }
+  
+    
+          if (user.recuperation !== null && user.recuperation > 0) {
+              if (user.recuperation >= demande.count) {
+                  user.recuperation -= demande.count;
+              }
+          }
+      
+  
+      // Save the updated user to the database
+      await this.UserRepository.save(user);
+  }
 
 
 

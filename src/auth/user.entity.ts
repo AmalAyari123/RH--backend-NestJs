@@ -3,6 +3,7 @@ import { Autorisation } from "src/autorisation/entities/autorisation.entity";
 import DatabaseFile from "src/databaseFile.entity";
 import { Demande } from "src/demande/entities/demande.entity";
 import { Departement } from "src/departement/entities/departement.entity";
+import { NotificationToken } from "src/notifications/entities/notification-token.entity";
 import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
@@ -33,6 +34,10 @@ export class User extends BaseEntity{
     SoldeConge : number;
     @Column({ nullable: true, type: 'float' })
     Solde1 : number ;
+    @Column({ nullable: true, type: 'float' })
+    congeMaladie : number ;
+    @Column({ nullable: true, type: 'float' })
+    recuperation: number ;
    /* @Column({ type: 'varchar', length: 300, nullable: true })
     profilePic: string;*/
 
@@ -60,6 +65,9 @@ export class User extends BaseEntity{
    @ManyToOne(type => Departement , departement => departement.users )
 @JoinColumn({name : 'DepartmentId'})
    departement : Departement ; 
+
+   @OneToMany(() => NotificationToken, notificationToken => notificationToken.user)
+  notificationTokens: NotificationToken[];
    
 
     

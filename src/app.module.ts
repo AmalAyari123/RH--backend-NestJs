@@ -11,6 +11,7 @@ import { RolesGuard } from './auth/role.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { AutorisationModule } from './autorisation/autorisation.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { NotificationModule } from './notifications/notifications.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot(typeorm),
@@ -26,6 +27,7 @@ import { MulterModule } from '@nestjs/platform-express';
     DemandeModule,
     DepartementModule,
     AutorisationModule,
+    NotificationModule,
      
     
     
